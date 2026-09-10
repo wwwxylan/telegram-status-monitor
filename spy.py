@@ -17,6 +17,7 @@ API_HASH = Credentials.API_HASH
 API_ID = Credentials.API_ID
 BOT_TOKEN = Credentials.BOT_TOKEN
 USER_NAME = Credentials.USER_NAME
+SESSION_STRING = Credentials.SESSION_STRING
 
 client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
 
