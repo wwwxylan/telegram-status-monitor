@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from time import mktime, sleep
 
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from telethon.tl.types import UserStatusOnline, UserStatusOffline
 
 from creds import Credentials
@@ -17,9 +18,8 @@ API_ID = Credentials.API_ID
 BOT_TOKEN = Credentials.BOT_TOKEN
 USER_NAME = Credentials.USER_NAME
 
-client = TelegramClient('status_monitor', API_ID, API_HASH)
+client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
 
-client.connect()
 client.start()
 bot = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
