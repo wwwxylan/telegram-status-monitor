@@ -43,17 +43,17 @@ help_messages = ['/start - start online monitoring ',
 
 print('running')
 class Contact:
-    online = None
-    last_offline = None
-    last_online = None
-    id = ''
-    name = ''
-
-    def __init__(self, id, name):
+    def __init__(self, id, name, identifier=None, kind=None):
         self.id = id
         self.name = name
+        self.identifier = identifier
+        self.kind = kind
+        self.online = None
+        self.went_online_at = None
+        self.went_offline_at = None
+
     def __str__(self):
-        return f'{self.name}: {self.id}'
+        return f'{self.name}: {self.identifier or self.id}'
 
 @bot.on(events.NewMessage(pattern='^/logs$'))
 async def logs(event):
@@ -181,24 +181,47 @@ async def start(event):
     user_data['is_running'] = False
     await event.respond(f'Spy gonna zzzzzz...')
 
-@bot.on(events.NewMessage(pattern='^/add'))
+@bot.on(events.NewMessage(pattern=r'^/add(\s|$)'))
 async def add(event):
-    message = event.message
-    person_info = message.message.split()
-    print(person_info)
-    phone = person_info[1]
-    name = person_info[2]
-    id = message.chat_id
-    if id not in data:
-        data[id] = {}
-    user_data = data[id]
+    parts = event.message.message.split(maxsplit=2)
 
-    if 'contacts' not in user_data:
-        user_data['contacts'] = []
-    contacts = user_data['contacts']
-    contact = Contact(phone, name)
-    contacts.append(contact)
-    await event.respond(f'{name}: {phone} has been added')
+    if len(parts) < 2:
+        await event.respond(
+            'Usage:\n'
+            '/add @username [label]\n'
+            '/add +14145551234 [label]'
+        )
+        return
+
+    identifier = parts[1]
+    label = parts[2] if len(parts) > 2 else identifier
+
+    if identifier.startswith('+') or identifier.replace('-', '').isdigit():
+        kind = 'phone'
+        identifier = '+' + identifier.lstrip('+').replace('-', '').replace(' ', '')
+    else:
+        kind = 'username'
+        identifier = identifier.lstrip('@')
+
+    try:
+        entity = await client.get_entity(identifier)
+    except ValueError:
+        await event.respond(
+            f'Could not resolve {identifier}. '
+            'Usernames must be public; phone numbers must already be in your contacts.'
+        )
+        return
+
+    chat_id = event.chat_id
+    user_data = data.setdefault(chat_id, {})
+    contacts = user_data.setdefault('contacts', [])
+
+    if any(c.id == entity.id for c in contacts):
+        await event.respond(f'{label} is already being tracked.')
+        return
+
+    contacts.append(Contact(entity.id, label, identifier, kind))
+    await event.respond(f'Now tracking {label} ({kind}: {identifier})')
 
 
 @bot.on(events.NewMessage(pattern='^/remove'))
